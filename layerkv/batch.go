@@ -27,30 +27,30 @@ func NewBatch[K comparable, V any](cache, store kv.BatchKV[K, V]) (*batch[K, V],
 }
 
 func (l batch[K, V]) Get(ctx context.Context, keys []K) (map[K]V, error) {
-	cache, err := l.cache.Get(ctx, keys)
+	cached, err := l.cache.Get(ctx, keys)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(cache) == len(keys) {
-		return cache, nil
+	if len(cached) == len(keys) {
+		return cached, nil
 	}
 
-	miss := make([]K, 0, len(keys)-len(cache))
+	miss := make([]K, 0, len(keys)-len(cached))
 	for _, key := range keys {
-		if _, ok := cache[key]; !ok {
+		if _, ok := cached[key]; !ok {
 			miss = append(miss, key)
 		}
 	}
 
-	store, err := l.store.Get(ctx, miss)
+	stored, err := l.store.Get(ctx, miss)
 	if err != nil {
 		return nil, err
 	}
 
-	maps.Copy(cache, store)
+	maps.Copy(cached, stored)
 
-	return cache, l.cache.Set(ctx, store)
+	return cached, l.cache.Set(ctx, stored)
 }
 
 func (l batch[K, V]) Set(ctx context.Context, kvs map[K]V) error {
